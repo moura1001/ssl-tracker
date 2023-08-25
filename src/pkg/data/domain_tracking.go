@@ -1,12 +1,18 @@
 package data
 
-import "time"
+import (
+	"context"
+	"time"
 
-const StatusHealthy = "healthy"
-const StatusExpires = "expired"
-const StatusInvalid = "invalid"
-const StatusOffline = "offline"
-const StatusUnresponsive = "unresponsive"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
+	"github.com/moura1001/ssl-tracker/src/pkg/util"
+	"github.com/uptrace/bun"
+)
+
+const (
+	domainTrackingTable = "domain_trackings"
+	defaultLimit        = 20
+)
 
 type DomainTrackingInfo struct {
 	Issuer        string
@@ -17,7 +23,7 @@ type DomainTrackingInfo struct {
 	Signature     string
 	DNSNames      string
 	KeyUsage      string
-	ExtKeyUsages  []string
+	ExtKeyUsages  []string `bun:",array"`
 	Expires       time.Time
 	Status        string
 	LastPollAt    time.Time
@@ -26,7 +32,7 @@ type DomainTrackingInfo struct {
 }
 
 type DomainTracking struct {
-	Id         int64
+	Id         int64 `bun:"id,pk,autoincrement"`
 	UserId     string
 	DomainName string
 
@@ -37,6 +43,34 @@ type TrackingAndAccount struct {
 	NotifyUpfront int
 
 	*DomainTracking
+}
+
+func CountUserDomainTrackings(userId string) (int, error) {
+	return db.Bun.NewSelect().
+		Model(&DomainTracking{}).
+		Where("user_id = ?", userId).
+		Count(context.Background())
+}
+
+func GetDomainTrackings(filter util.Map, limit int, page int) ([]DomainTracking, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	var trackings []DomainTracking
+	builder := db.Bun.NewSelect().Model(&trackings).Limit(limit)
+	for k, v := range filter {
+		if v != "" {
+			builder.Where("? = ?", bun.Ident(k), v)
+		}
+	}
+	offset := (limit - 1) * page
+	builder.Offset(offset)
+	err := builder.Scan(context.Background())
+	return trackings, err
+}
+
+func GetDomainTracking(query util.Map) (*DomainTracking, error) {
+	return nil, nil
 }
 
 // TODO: implementation

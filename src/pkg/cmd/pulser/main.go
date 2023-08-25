@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/logger"
 	"github.com/moura1001/ssl-tracker/src/pkg/ssl"
 )
@@ -114,9 +115,7 @@ func (m *Monitor) Start() {
 }
 
 func main() {
-	/*if err := godotenv.Load(".env"); err != nil {
-		log.Fatal(err)
-	}*/
+	db.Init()
 	logger.Init()
 
 	m := NewMonitor(time.Second * 10)
