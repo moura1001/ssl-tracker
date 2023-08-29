@@ -1,0 +1,14 @@
+{{include "base/base"}}
+{{ block "content" . }}
+<div class="container mx-auto mt-20 flex gap-10">
+    {{include "base/sidenav"}}
+    {{if !.trackings}}
+    <div class="flex w-full justify-center mt-20">
+        <div class="border border-base-300 p-8 rounded-lg text-center prose">
+            <p class="font-semibold">You have currently no domains that are being tracked.</p>
+            <p class="font-semibold"><a href="/domains/new">Click here to track domains</a></p>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{ end }}

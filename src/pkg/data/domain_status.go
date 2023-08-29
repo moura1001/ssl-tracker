@@ -2,7 +2,8 @@ package data
 
 const (
 	StatusHealthy      = "healthy"
-	StatusExpires      = "expired"
+	StatusExpires      = "expires"
+	StatusExpired      = "expired"
 	StatusInvalid      = "invalid"
 	StatusOffline      = "offline"
 	StatusUnresponsive = "unresponsive"

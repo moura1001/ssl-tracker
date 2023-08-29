@@ -1,8 +1,12 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"path"
+	"runtime"
+	"time"
 
 	kitlog "github.com/go-kit/log"
 )
@@ -20,5 +24,15 @@ func Init() {
 }
 
 func Log(keyvals ...interface{}) {
-	logger.Log(keyvals...)
+	_, file, no, ok := runtime.Caller(1)
+	ts := time.Now()
+	caller := "%s:%d"
+	if ok {
+		caller = fmt.Sprintf(caller, path.Base(file), no)
+	} else {
+		caller = "unknow.go"
+	}
+
+	params := append([]interface{}{"ts", ts, "caller", caller}, keyvals...)
+	logger.Log(params...)
 }

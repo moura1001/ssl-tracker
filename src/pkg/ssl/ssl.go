@@ -5,16 +5,99 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/logger"
+	"github.com/moura1001/ssl-tracker/src/pkg/notify"
+	"github.com/robfig/cron/v3"
 )
+
+const pollEvery = "@every 10s"
+
+func StartCron() {
+	c := cron.New(cron.WithChain(cron.Recover(cron.DefaultLogger)))
+	entry, err := c.AddFunc(pollEvery, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		if err := PollAllDomains(ctx); err != nil {
+			logger.Log("msg", "stopping cron", "error", err)
+			c.Stop()
+		}
+	})
+
+	if err != nil {
+		logger.Log("msg", "cron addFunc", "error", err)
+		return
+	}
+	logger.Log("msg", "starting domain polling cron", "entryId", entry)
+	c.Start()
+}
+
+func PollAllDomains(ctx context.Context) error {
+	start := time.Now()
+
+	trackings, err := data.GetAllTrackingsWithAccount()
+	if err != nil {
+		return err
+	}
+
+	var (
+		updatedTrackings = []data.DomainTracking{}
+		wg               = sync.WaitGroup{}
+	)
+
+	for _, tracking := range trackings {
+		wg.Add(1)
+		go func(tracking data.TrackingAndAccount) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			defer func() {
+				cancel()
+				wg.Done()
+			}()
+
+			trackingInfo, err := PollDomain(ctx, tracking.DomainName)
+			if err != nil {
+				logger.Log("error", "failed to poll domain", "err", err, "domain", tracking.DomainName)
+				return
+			}
+			domainTracking := tracking.DomainTracking
+			domainTracking.DomainTrackingInfo = *trackingInfo
+			updatedTrackings = append(updatedTrackings, domainTracking)
+
+			expires := trackingInfo.Expires
+			notifyUpfront := time.Hour * 24 * time.Duration(tracking.NotifyUpfront)
+			if time.Until(expires) <= notifyUpfront {
+				notifiers := []notify.Notifier{}
+				for _, notifier := range notifiers {
+					start := time.Now()
+					if err := notifier.Notify(context.Background(), tracking); err != nil {
+						logger.Log("error", "notifier error", "err", err, "kind", notifier.Kind())
+						return
+					}
+					logger.Log("msg", "notification", "kind", notifier.Kind(), "took", time.Since(start))
+				}
+			}
+		}(tracking)
+	}
+	wg.Wait()
+
+	if err := data.UpdateAllTrackings(updatedTrackings); err != nil {
+		return err
+	}
+
+	logger.Log("msg", "finished polling all trackings", "count", len(trackings), "took", time.Since(start))
+
+	return nil
+}
 
 func PollDomain(ctx context.Context, domain string) (*data.DomainTrackingInfo, error) {
 	var (
@@ -26,9 +109,10 @@ func PollDomain(ctx context.Context, domain string) (*data.DomainTrackingInfo, e
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:443", domain), config)
 		if err != nil {
 			info := data.DomainTrackingInfo{
-				LastPollAt: time.Now(),
+				LastPollAt: start,
 				Error:      err.Error(),
 				Latency:    int(time.Since(start).Milliseconds()),
+				Issuer:     "n/a",
 			}
 			if IsVerificationError(err) {
 				info.Status = data.StatusInvalid
@@ -62,7 +146,7 @@ func PollDomain(ctx context.Context, domain string) (*data.DomainTrackingInfo, e
 			Expires:       cert.NotAfter,
 			DNSNames:      strings.Join(cert.DNSNames, ", "),
 			Issuer:        cert.Issuer.Organization[0],
-			LastPollAt:    time.Now(),
+			LastPollAt:    start,
 			Latency:       int(time.Since(start).Milliseconds()),
 			Status:        getStatus(cert.NotAfter),
 		}
@@ -70,11 +154,13 @@ func PollDomain(ctx context.Context, domain string) (*data.DomainTrackingInfo, e
 
 	select {
 	case <-ctx.Done():
-		return &data.DomainTrackingInfo{
-			Error:      ctx.Err().Error(),
-			LastPollAt: time.Now(),
-			Status:     data.StatusUnresponsive,
-		}, nil
+		fmt.Println(ctx.Err())
+		return nil, ctx.Err()
+		//return &data.DomainTrackingInfo{
+		//	Error:      ctx.Err().Error(),
+		//	Status:     data.StatusUnresponsive,
+		//	Issuer:		"n/a"
+		//}, nil
 	case result := <-resultChan:
 		return &result, nil
 	}
@@ -160,19 +246,19 @@ func encodedPEMFromCert(cert *x509.Certificate) string {
 func sha1Hex(data []byte) string {
 	hasher := sha1.New()
 	hasher.Write(data)
-	return hex.EncodeToString(hasher.Sum(nil))
+	return base64.RawStdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-func getStatus(certificateNotAfter time.Time) string {
-	if certificateNotAfter.After(time.Now()) {
+func getStatus(expires time.Time) string {
+	if expires.After(time.Now()) {
 		return data.StatusHealthy
 	} else {
-		return data.StatusExpires
+		return data.StatusExpired
 	}
 }
 
 func IsVerificationError(err error) bool {
-	return errors.Is(err, syscall.EINVAL)
+	return strings.Contains(err.Error(), "tls: failed to verify")
 }
 
 func IsConnectionRefused(err error) bool {

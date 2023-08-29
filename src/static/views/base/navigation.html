@@ -1,0 +1,30 @@
+<div class="w-full px-4 lg:container lg:mx-auto py-3">
+    {{ if .flash.appError }}
+    <div class="alert alert-error">{{.flash.appError}}</div>
+    {{ end }}
+    <div class="flex justify-between items-center">
+        <div class="flex gap-10">
+            <div class="font-bold text-3xl"><a href="/">CertPulse</a></div>
+            <div class="flex space-x-10 items-end font-semibold"><a class="hover:text-primary"
+                    href="/pricing"></a>Pricing</div>
+        </div>
+        <div>
+            {{ if .user }}
+            <ul class="menu menu-horizontal px-1">
+                <li>
+                    <details>
+                        <summary>{{.user.Email}}</summary>
+                        <ul class="p-2 bg-base-800">
+                            <li><a href="/domains">Domains</a></li>
+                            <li><a href="/account">Account</a></li>
+                            <li><a href="/signout">Sign out</a></li>
+                        </ul>
+                    </details>
+                </li>
+            </ul>
+            {{ else }}
+            <a href="/signin" class="float-right btn btn-outline btn-neutral btn-sm">sign up for free plan</a>
+            {{ end }}
+        </div>
+    </div>
+</div>

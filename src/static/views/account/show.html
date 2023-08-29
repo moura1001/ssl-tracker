@@ -1,0 +1,60 @@
+{{include "base/base"}}
+{{ block "content" . }}
+<div class="container mx-auto mt-20 flex gap-10">
+    {{include "base/sidenav"}}
+    <div class="w-full">
+        <h1 class="font-semibold uppercase">General</h1>
+        <div class="mt-6 border-t border-base-200">
+            <dl>
+                <div class="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+                    <dt class="text-sm font-medium leading-6">Email</dt>
+                    <dd class="mt-1 text-sm leading-6 sm:col-span-2 sm:mt-0">
+                        {{.user.Email}}
+                        <button class="float-right btn btn-outline btn-neutral btn-sm">change email</button>
+                    </dd>
+                </div>
+                <div class="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+                    <dt class="text-sm font-medium leading-6">Plan</dt>
+                    <dd class="mt-1 text-sm leading-6 sm:col-span-2 sm:mt-0">
+                        <div class="badge badge-success">{{.account.Plan}}</div>
+                        <a href="{{.customerPortalURL}}" target="_blank"
+                            class="float-right btn btn-outline btn-neutral btn-sm">change plan</a>
+                    </dd>
+                </div>
+            </dl>
+        </div>
+        <div class="my-10"></div>
+        <h1 class="font-semibold uppercase">Settings</h1>
+        <div class="mt-6 border-t border-base-200">
+            <form method="POST" action="/account">
+                <div class="mt-6">
+                    <p class="font-bold mb-2 text-sm">Default notification email</p>
+                    <input name="defaultNotifyEmail" value="{{.account.DefaultNotifyEmail}}"
+                        class="input w-fit input-sm input-bordered" />
+                </div>
+                {{ if .flash.defaultNotifyEmailError }}
+                <label class="label">
+                    <span class="label-text-alt text-error">{{.flash.defaultNotifyEmailError}}</span>
+                </label>
+                {{ end }}
+                <div class="border-b border-base-200 my-6"></div>
+                <div>
+                    <p class="font-hold mb-2 text-sm">Notify me</p>
+                    <div class="join">
+                        <input name="notifyUpfront" value="{{.account.NotifyUpfront}}"
+                            class="input w-28 input-sm input-bordered join-item" />
+                        <button type="button" class="btn btn-sm join-item">days before expiry</button>
+                    </div>
+                    {{ if .flash.notifyUpfrontError }}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{.flash.notifyUpfrontError}}</span>
+                    </label>
+                    {{ end }}
+                </div>
+                <div class="border-b border-base-200 my-6"></div>
+                <button type="submit" class="btn btn-sm btn-primary">Save changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

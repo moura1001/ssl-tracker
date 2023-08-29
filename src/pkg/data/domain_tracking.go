@@ -39,12 +39,6 @@ type DomainTracking struct {
 	DomainTrackingInfo
 }
 
-type TrackingAndAccount struct {
-	NotifyUpfront int
-
-	*DomainTracking
-}
-
 func CountUserDomainTrackings(userId string) (int, error) {
 	return db.Bun.NewSelect().
 		Model(&DomainTracking{}).
@@ -69,6 +63,7 @@ func GetDomainTrackings(filter util.Map, limit int, page int) ([]DomainTracking,
 	return trackings, err
 }
 
+// TODO: implementation
 func GetDomainTracking(query util.Map) (*DomainTracking, error) {
 	return nil, nil
 }
@@ -76,15 +71,25 @@ func GetDomainTracking(query util.Map) (*DomainTracking, error) {
 // TODO: implementation
 func GetAllTrackingsWithAccount() ([]TrackingAndAccount, error) {
 	return []TrackingAndAccount{
-		{DomainTracking: &DomainTracking{DomainName: "google.com"}},
-		{DomainTracking: &DomainTracking{DomainName: "facebook.com"}},
-		{DomainTracking: &DomainTracking{DomainName: "youtube.com"}},
-		{DomainTracking: &DomainTracking{DomainName: "twitter.com"}},
-		{DomainTracking: &DomainTracking{DomainName: "amazon.com"}},
+		{DomainTracking: DomainTracking{DomainName: "google.com"}},
+		{DomainTracking: DomainTracking{DomainName: "facebook.com"}},
+		{DomainTracking: DomainTracking{DomainName: "youtube.com"}},
+		{DomainTracking: DomainTracking{DomainName: "twitter.com"}},
+		{DomainTracking: DomainTracking{DomainName: "amazon.com"}},
 	}, nil
 }
 
 // TODO: implementation
+func CreateDomainTrackings(trackings []*DomainTracking) error {
+	return nil
+}
+
+// TODO: implementation
 func UpdateAllTrackings(trackings []DomainTracking) error {
+	return nil
+}
+
+// TODO: implementation
+func DeleteDomainTracking(query util.Map) error {
 	return nil
 }

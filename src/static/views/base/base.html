@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CertPulse - Track and monitor all your SSl certificates in one place.</title>
+        <meta name="description" content="CertPulse tracks all your SSL certificates and notifies your before they expires.">
+        <link href="https://cdn.jsdelivr.net/npm/daisyui@3.6.2/dist/full.css" rel="stylesheet" type="text/css" />
+        <script src="https://cdn.tailwindcss.com"></script>
+        {{ css "app.css" }}
+    </head>
+
+    <body class="min-h-screen pb-10">
+        {{include "base/navigation"}}
+        {{block "content" .}}{{end}}
+    </body>
+</html>
