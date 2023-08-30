@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"html/template"
 	"io"
@@ -16,8 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/handlers"
 	"github.com/moura1001/ssl-tracker/src/pkg/logger"
+	"github.com/moura1001/ssl-tracker/src/pkg/ssl"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
 )
 
@@ -27,17 +30,21 @@ func main() {
 		log.Fatal(err)
 	}
 	logger.Init()
+	db.Init()
 
-	//ssl.StartCron()
+	ssl.StartCron()
 
-	logger.Log("msg", "Server is listening on port 3000...")
-	app.Run(":3000")
+	port := util.GetEnv("LISTEN_PORT", ":3000")
+	logger.Log("msg", fmt.Sprintf("Server is listening on port %s...", port))
+	log.Fatal(app.Run(port))
 }
 
 func initApp() (*gin.Engine, error) {
 	if err := godotenv.Load(); err != nil {
 		return nil, err
 	}
+
+	gob.Register(util.Map{})
 
 	store := cookie.NewStore([]byte(util.GetEnv("SESSION_KEY", "secret")))
 
@@ -63,7 +70,18 @@ func initApp() (*gin.Engine, error) {
 	router.Use(handlers.WithAuthenticatedUser)
 	router.Use(handlers.WithViewHelpers)
 
-	router.GET("/account", handlers.HandleAccountShow)
+	domains := router.Group("/domains", handlers.WithMustBeAuthenticated)
+	//domains := router.Group("/domains")
+	domains.GET("/", handlers.HandleDomainList)
+	domains.POST("/", handlers.HandleDomainCreate)
+	domains.GET("/new", handlers.HandleDomainNew)
+	domains.GET("/:id", handlers.HandleDomainShow)
+	domains.POST("/:id/delete", handlers.HandleDomainDelete)
+
+	account := router.Group("/account", handlers.WithMustBeAuthenticated)
+	//account := router.Group("/account")
+	account.GET("/", handlers.HandleAccountShow)
+	account.POST("/", handlers.HandleAccountUpdate)
 
 	return router, nil
 }
@@ -99,18 +117,18 @@ func createEngine() *ginview.ViewEngine {
 				}
 				return fmt.Sprintf("%d days", time.Until(t)/(time.Hour*24))
 			},
-			"badgeForStatus": func(status string) string {
+			"badgeForStatus": func(status string) template.HTML {
 				switch status {
 				case data.StatusHealthy:
-					return fmt.Sprintf(`<badge class="badge badge-success">%s</badge>`, status)
+					return template.HTML(fmt.Sprintf(`<div class="badge badge-success">%s</div>`, status))
 				case data.StatusExpires:
-					return fmt.Sprintf(`<badge class="badge badge-warning">%s</badge>`, status)
+					return template.HTML(fmt.Sprintf(`<div class="badge badge-warning">%s</div>`, status))
 				case data.StatusExpired:
-					return fmt.Sprintf(`<badge class="badge badge-error">%s</badge>`, status)
+					return template.HTML(fmt.Sprintf(`<div class="badge badge-error">%s</div>`, status))
 				case data.StatusInvalid:
-					return fmt.Sprintf(`<badge class="badge badge-error">%s</badge>`, status)
+					return template.HTML(fmt.Sprintf(`<div class="badge badge-error">%s</div>`, status))
 				case data.StatusOffline:
-					return fmt.Sprintf(`<badge class="badge badge-error">%s</badge>`, status)
+					return template.HTML(fmt.Sprintf(`<div class="badge badge-error">%s</div>`, status))
 				default:
 					return ""
 				}

@@ -2,11 +2,45 @@
 {{ block "content" . }}
 <div class="container mx-auto mt-20 flex gap-10">
     {{include "base/sidenav"}}
-    {{if !.trackings}}
+    {{if not .trackings}}
     <div class="flex w-full justify-center mt-20">
         <div class="border border-base-300 p-8 rounded-lg text-center prose">
             <p class="font-semibold">You have currently no domains that are being tracked.</p>
             <p class="font-semibold"><a href="/domains/new">Click here to track domains</a></p>
+        </div>
+    </div>
+    {{end}}
+
+    {{if and .trackings .userHasTrackings}}
+    <div class="flex w-full">
+        <div class="overflow-x-auto w-full">
+            <h1 class="text-3xl font-bold mb-12">My tracked domains</h1>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Domain</th>
+                        <th>Issuer</th>
+                        <th>Expiry date</th>
+                        <th>Days left</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range $tracking := .trackings }}
+                    <tr>
+                        <th>{{$tracking.Id}}</th>
+                        <th>{{$tracking.DomainName}}</th>
+                        <td>{{$tracking.Issuer}}</td>
+                        <td>{{formatTime $tracking.Expires}}</td>
+                        <td>{{daysLeft $tracking.Expires}}</td>
+                        <td>{{badgeForStatus $tracking.Status}}</td>
+                        <td><a class="btn btn-neutral btn-xs" href="/domains/{{$tracking.Id}}">show</a></td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
         </div>
     </div>
     {{end}}

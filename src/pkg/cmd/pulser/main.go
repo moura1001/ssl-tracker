@@ -28,7 +28,7 @@ func NewMonitor(interval time.Duration) *Monitor {
 }
 
 func (m *Monitor) poll() (int, error) {
-	trackingsWithAccount, err := data.GetAllTrackingsWithAccount()
+	trackingsWithAccount, err := db.Store.Domain.GetAllTrackingsWithAccount()
 	if err != nil {
 		return 0, err
 	}
@@ -91,7 +91,7 @@ func (m *Monitor) processResults(resultsChan chan data.DomainTracking) error {
 		trackings[i] = result
 		i++
 	}
-	return data.UpdateAllTrackings(trackings)
+	return db.Store.Domain.UpdateAllTrackings(trackings)
 }
 
 func (m *Monitor) Start() {

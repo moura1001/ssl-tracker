@@ -1,0 +1,30 @@
+{{include "base/base"}}
+{{ block "content" . }}
+<div class="container mx-auto mt-[calc(4vh)] flex gap-10">
+    {{include "base/sidenav"}}
+    <div class="flex w-full">
+        <div class="prose">
+            <h1 class="text-3xl font-bold">Track new domains</h1>
+            <p>Add a single domain or a comma separated list of all the domains you want to track.</p>
+            <form action="/domains" method="POST">
+                <div>
+                    <textarea rows="5" class="textarea textarea-bordered mb-6 w-full text-base"
+                        placeholder="mydomain.com,someotherdomain.so" name="domains">{{.flash.domains}}</textarea>
+                    {{if .flash.domainsError}}
+                    <p class="text-error font-bold">{{.flash.domainsError}}</p>
+                    {{end}}
+                    {{if .flash.maxTrackings}}
+                    <div class="mb-10 border border-error rounded-lg p-4">
+                        <p class="font-bold">With your current plan you can track up to a total of {{.flash.maxTrackings}} domains.</p>
+                        <p>If you want to track more domais you can <a href="/account">upgrade your account here.</a></p>
+                    </div>
+                    {{end}}
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary btn-sm w-fit">Track domains</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

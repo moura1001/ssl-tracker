@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/logger"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
 )
@@ -138,7 +138,7 @@ func HandleAuthCallback(ctx *gin.Context) {
 		ourUser := &data.User{Id: user.Id, Email: user.Email}
 	*/
 
-	acc, err := data.CreateAccountForUserIfNotExist(client)
+	acc, err := db.Store.Account.CreateAccountForUserIfNotExist(client)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return

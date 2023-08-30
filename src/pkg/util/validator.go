@@ -1,7 +1,7 @@
 package util
 
 func IsValidDomainName(domain string) bool {
-	return false
+	return true
 }
 
 func IsValidEmail(email string) bool {

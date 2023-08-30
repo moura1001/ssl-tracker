@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
 )
 
@@ -30,13 +31,13 @@ func HandleAccountUpdate(ctx *gin.Context) {
 		return
 	}
 	user := getAuthenticatedUser(ctx)
-	account, err := data.GetUserAccount(user.Id)
+	account, err := db.Store.Account.GetUserAccount(user.Id)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
 	account.NotifyUpfront = params.NotifyUpfront
-	if err := data.UpdateAccount(account); err != nil {
+	if err := db.Store.Account.UpdateAccount(account); err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
@@ -53,7 +54,7 @@ func HandleAccountShow(ctx *gin.Context) {
 	}
 
 	data := util.Map{
-		"user":    account,
+		//"user":    account,
 		"account": account,
 	}
 	ctx.HTML(http.StatusOK, "account/show", data)

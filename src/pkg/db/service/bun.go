@@ -1,4 +1,4 @@
-package db
+package db_service
 
 import (
 	"database/sql"

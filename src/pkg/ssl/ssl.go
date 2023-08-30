@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/logger"
 	"github.com/moura1001/ssl-tracker/src/pkg/notify"
 	"github.com/robfig/cron/v3"
@@ -45,7 +46,7 @@ func StartCron() {
 func PollAllDomains(ctx context.Context) error {
 	start := time.Now()
 
-	trackings, err := data.GetAllTrackingsWithAccount()
+	trackings, err := db.Store.Domain.GetAllTrackingsWithAccount()
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func PollAllDomains(ctx context.Context) error {
 	}
 	wg.Wait()
 
-	if err := data.UpdateAllTrackings(updatedTrackings); err != nil {
+	if err := db.Store.Domain.UpdateAllTrackings(updatedTrackings); err != nil {
 		return err
 	}
 
@@ -249,11 +250,15 @@ func sha1Hex(data []byte) string {
 	return base64.RawStdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
+var loomingThreshold = time.Hour * 24 * 7 * 2 // 2 weeks
+
 func getStatus(expires time.Time) string {
-	if expires.After(time.Now()) {
-		return data.StatusHealthy
-	} else {
+	if expires.Before(time.Now()) {
 		return data.StatusExpired
+	} else if time.Now().Add(loomingThreshold).After(expires) {
+		return data.StatusExpires
+	} else {
+		return data.StatusHealthy
 	}
 }
 

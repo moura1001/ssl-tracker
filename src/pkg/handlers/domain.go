@@ -13,7 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
+	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/settings"
+	"github.com/moura1001/ssl-tracker/src/pkg/ssl"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
 )
 
@@ -35,13 +37,13 @@ var statusFilters = []string{
 
 func HandleDomainList(ctx *gin.Context) {
 	user := getAuthenticatedUser(ctx)
-	count, err := data.CountUserDomainTrackings(user.Id)
+	count, err := db.Store.Domain.CountUserDomainTrackings(user.Id)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
 	if count <= 0 {
-		ctx.HTML(http.StatusOK, "domains-index.html", util.Map{"userHasTrackings": false})
+		ctx.HTML(http.StatusOK, "domains/index", util.Map{"userHasTrackings": false})
 		return
 	}
 	filter, err := buildTrackingFilter(ctx)
@@ -56,7 +58,7 @@ func HandleDomainList(ctx *gin.Context) {
 	if filter.Status != "all" {
 		query["status"] = filter.Status
 	}
-	domains, err := data.GetAllTrackingsWithAccount()
+	domains, err := db.Store.Domain.GetAllTrackingsWithAccount()
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
@@ -68,11 +70,14 @@ func HandleDomainList(ctx *gin.Context) {
 		"pages":            buildPages(count, filter.Limit),
 		"queryParams":      filter.encode(),
 	}
-	ctx.HTML(http.StatusOK, "domains-index.html", data)
+	ctx.HTML(http.StatusOK, "domains/index", data)
 }
 
 func HandleDomainNew(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "domains-new.html", util.Map{})
+	flashes, _ := ctx.Get("flash")
+	ctx.HTML(http.StatusOK, "domains/new", util.Map{
+		"flash": flashes,
+	})
 }
 
 func HandleDomainDelete(ctx *gin.Context) {
@@ -81,7 +86,7 @@ func HandleDomainDelete(ctx *gin.Context) {
 		"user_id": user.Id,
 		"id":      ctx.Param("id"),
 	}
-	if err := data.DeleteDomainTracking(query); err != nil {
+	if err := db.Store.Domain.DeleteDomainTracking(query); err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
@@ -95,7 +100,7 @@ func HandleDomainShow(ctx *gin.Context) {
 		"user_id": user.Id,
 		"id":      trackingId,
 	}
-	tracking, err := data.GetDomainTracking(query)
+	tracking, err := db.Store.Domain.GetDomainTracking(query)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
@@ -103,7 +108,7 @@ func HandleDomainShow(ctx *gin.Context) {
 	context := util.Map{
 		"tracking": tracking,
 	}
-	ctx.HTML(http.StatusOK, "domains-show.html", context)
+	ctx.HTML(http.StatusOK, "domains/show", context)
 }
 
 func HandleDomainCreate(ctx *gin.Context) {
@@ -114,7 +119,7 @@ func HandleDomainCreate(ctx *gin.Context) {
 	if len(userDomainsInput) <= 0 {
 		flashData["domainsError"] = "Please provide at least 1 valid domain name"
 		flashWithData(ctx, flashData)
-		ctx.Redirect(http.StatusBadRequest, "/domains/new")
+		ctx.Redirect(http.StatusFound, "/domains/new")
 		return
 	}
 	domains := strings.Split(userDomainsInput, ",")
@@ -122,7 +127,7 @@ func HandleDomainCreate(ctx *gin.Context) {
 		flashData["domainsError"] = "Invalid domain list input. Make sure to use a comma separated list (domain1.com, domain2.com, etc)"
 		flashData["domains"] = userDomainsInput
 		flashWithData(ctx, flashData)
-		ctx.Redirect(http.StatusBadRequest, "/domains/new")
+		ctx.Redirect(http.StatusFound, "/domains/new")
 		return
 	}
 	for _, domain := range domains {
@@ -130,20 +135,20 @@ func HandleDomainCreate(ctx *gin.Context) {
 			flashData["domainsError"] = fmt.Sprintf("%s is not a valid domain", domain)
 			flashData["domains"] = userDomainsInput
 			flashWithData(ctx, flashData)
-			ctx.Redirect(http.StatusBadRequest, "/domains/new")
+			ctx.Redirect(http.StatusFound, "/domains/new")
 			return
 		}
 	}
 
 	user := getAuthenticatedUser(ctx)
-	account, err := data.GetUserAccount(user.Id)
+	account, err := db.Store.Account.GetUserAccount(user.Id)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
 
 	maxTrackings := settings.Account[account.Plan].MaxTrackings
-	count, err := data.CountUserDomainTrackings(user.Id)
+	count, err := db.Store.Domain.CountUserDomainTrackings(user.Id)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
@@ -152,7 +157,7 @@ func HandleDomainCreate(ctx *gin.Context) {
 		flashData["maxTrackings"] = maxTrackings
 		flashData["domains"] = userDomainsInput
 		flashWithData(ctx, flashData)
-		ctx.Redirect(http.StatusBadRequest, "/domains/new")
+		ctx.Redirect(http.StatusFound, "/domains/new")
 		return
 	}
 
@@ -161,25 +166,40 @@ func HandleDomainCreate(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Redirect(http.StatusCreated, "/domains")
+	ctx.Redirect(http.StatusFound, "/domains")
 }
 
 func createAllDomainTrackings(userId string, domains []string) error {
 	var (
-		trackings = []*data.DomainTracking{}
-		wg        = sync.WaitGroup{}
+		trackingsChan = make(chan data.DomainTracking, len(domains))
+		wg            = sync.WaitGroup{}
 	)
 
 	for _, domain := range domains {
 		wg.Add(1)
 		go func(domain string) {
-			_, _ = context.WithTimeout(context.Background(), time.Second*2)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			defer func() {
+				cancel()
+				wg.Done()
+			}()
 
+			info, err := ssl.PollDomain(ctx, domain)
+			if err != nil {
+				return
+			}
+
+			trackingsChan <- data.DomainTracking{
+				UserId:             userId,
+				DomainName:         domain,
+				DomainTrackingInfo: *info,
+			}
 		}(domain)
 	}
 	wg.Wait()
+	close(trackingsChan)
 
-	return data.CreateDomainTrackings(trackings)
+	return db.Store.Domain.CreateDomainTrackings(processResults(trackingsChan))
 }
 
 type trackingFilter struct {

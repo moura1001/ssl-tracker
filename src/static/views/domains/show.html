@@ -1,0 +1,44 @@
+{{include "base/base"}}
+{{ block "content" . }}
+<div class="container mx-auto mt-20 flex gap-10">
+    {{include "base/sidenav"}}
+    <div class="w-full">
+        <h1 class="text-3xl font-bold mb-12">{{.tracking.DomainName}}</h1>
+        <div class="flex flex-col space-y-4">
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Status</div>
+                <div>{{badgeForStatus .tracking.Status}}</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Latency</div>
+                <div>{{.tracking.Latency}}ms</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Issuer</div>
+                <div>{{.tracking.Issuer}}</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Dns names</div>
+                <div>{{.tracking.DNSNames}}</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Expires</div>
+                <div>{{formatTime .tracking.Expires}} ({{daysLeft .tracking.Expires}})</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Signature</div>
+                <div>{{.tracking.Signature}}</div>
+            </div>
+            <div class="flex">
+                <div class="w-1/4 font-semibold">Last check</div>
+                <div>{{formatTime .tracking.LastPollAt}}</div>
+            </div>
+        </div>
+        <div class="mt-10">
+            <form action="/domains/{{.tracking.Id}}/delete" method="POST">
+                <button type="submit" class="btn btn-neutral btn-sm">stop tracking</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

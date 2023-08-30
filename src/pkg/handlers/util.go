@@ -17,5 +17,18 @@ func getAuthenticatedUser(ctx *gin.Context) *data.User {
 			return user
 		}
 	}
-	return nil
+	return &data.User{Id: "123", Email: "email@email.com"}
+	//return nil
+}
+
+func processResults(resultsChan chan data.DomainTracking) []data.DomainTracking {
+	var (
+		trackings = make([]data.DomainTracking, len(resultsChan))
+		i         int
+	)
+	for result := range resultsChan {
+		trackings[i] = result
+		i++
+	}
+	return trackings
 }

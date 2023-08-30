@@ -7,8 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/moura1001/ssl-tracker/src/pkg/db"
+	"github.com/joho/godotenv"
 	"github.com/moura1001/ssl-tracker/src/pkg/db/migrations"
+	db_service "github.com/moura1001/ssl-tracker/src/pkg/db/service"
 	"github.com/uptrace/bun/extra/bundebug"
 	"github.com/uptrace/bun/migrate"
 	"github.com/urfave/cli/v2"
@@ -16,9 +17,13 @@ import (
 
 // Reference: https://github.com/uptrace/bun/tree/master/example/migrate
 func main() {
-	db.Init()
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
 
-	db.Bun.AddQueryHook(bundebug.NewQueryHook(
+	db_service.Init()
+
+	db_service.Bun.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
 		bundebug.FromEnv(""),
 	))
@@ -27,7 +32,7 @@ func main() {
 		Name: "bun",
 
 		Commands: []*cli.Command{
-			newDBCommand(migrate.NewMigrator(db.Bun, migrations.Migrations)),
+			newDBCommand(migrate.NewMigrator(db_service.Bun, migrations.Migrations)),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
