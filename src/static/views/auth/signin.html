@@ -1,0 +1,39 @@
+{{include "base/base"}}
+{{ block "content" . }}
+<div class="container mx-auto flex gap-10">
+    <script>
+        function signinWithEmail() {
+            var form = document.getElementById("authform");
+            form.action = '/signin';
+            form.submit();
+        }
+        function signinWithGoogle() {
+            var form = document.getElementById("authform");
+            form.action = '/signin/google';
+            form.submit();
+        }
+    </script>
+    <div class="w-full">
+        <div class="relative flex flex-col items-center justify-center h-screen overflow-hidden">
+            <div class="w-full p-6 bg-white border-t-4 border-gray-600 rounded-md shadow-md border-top lg:max-w-lg">
+                <h1 class="text-3xl font-semibold text-center text-gray-700">Sign in</h1>
+                <form method="POST" class="space-y-4" id="authform">
+                    <div>
+                        <label class="label"><span class="text-base label-text">Email</span></label>
+                        <input type="text" placeholder="Email Address" class="w-full input input-bordered" />
+                    </div>
+                    <div>
+                        <label class="label"><span class="text-base label-text">Password</span></label>
+                        <input type="password" placeholder="Enter Password" class="w-full input input-bordered" />
+                    </div>
+                    <div><button type="button" onclick="javascript:signinWithEmail()" class="btn btn-block">Sign in</button></div>
+                    <div class="divider"></div>
+                    <div><button type="button" onclick="javascript:signinWithGoogle()" class="btn btn-block">Sign in with Google</button></div>
+                </form>
+            </div>
+            <div class="divider"></div>
+            <a href="/signup" class="link link-info">Don't have an account? Sign up for free here</a>
+        </div>
+    </div>
+</div>
+{{end}}

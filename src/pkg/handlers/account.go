@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/moura1001/ssl-tracker/src/pkg/data"
 	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
 )
@@ -44,18 +43,16 @@ func HandleAccountUpdate(ctx *gin.Context) {
 	ctx.Redirect(http.StatusFound, "/account")
 }
 
-// TODO: implementation
 func HandleAccountShow(ctx *gin.Context) {
-	account := data.Account{
-		Email:              "email@email.com",
-		Plan:               data.PlanFree,
-		NotifyUpfront:      4,
-		DefaultNotifyEmail: "email@email.com",
+	user := getAuthenticatedUser(ctx)
+	account, err := db.Store.Account.GetUserAccount(user.Id)
+	if err != nil {
+		ctx.Error(NewDefaultHttpError(err))
+		return
 	}
-
-	data := util.Map{
-		//"user":    account,
+	context := util.Map{
 		"account": account,
+		"user":    user,
 	}
-	ctx.HTML(http.StatusOK, "account/show", data)
+	ctx.HTML(http.StatusOK, "account/show", context)
 }

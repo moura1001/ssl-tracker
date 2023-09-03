@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/foolin/goview"
@@ -16,6 +17,9 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/google"
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
 	"github.com/moura1001/ssl-tracker/src/pkg/db"
 	"github.com/moura1001/ssl-tracker/src/pkg/handlers"
@@ -29,8 +33,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger.Init()
 	db.Init()
+	logger.Init()
 
 	ssl.StartCron()
 
@@ -45,8 +49,25 @@ func initApp() (*gin.Engine, error) {
 	}
 
 	gob.Register(util.Map{})
+	gob.Register(data.User{})
 
 	store := cookie.NewStore([]byte(util.GetEnv("SESSION_KEY", "secret")))
+	store.Options(sessions.Options{
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+	})
+
+	scopes := strings.Split(util.GetEnv("GOOGLE_AUTH_SCOPES", ""), ",")
+	gothic.Store = store
+	goth.UseProviders(
+		google.New(
+			util.GetEnv("GOOGLE_CLIENT_ID", ""),
+			util.GetEnv("GOOGLE_CLIENT_SECRET", ""),
+			util.GetEnv("GOOGLE_AUTH_CALLBACK", ""),
+			scopes...,
+		),
+	)
 
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
@@ -67,11 +88,19 @@ func initApp() (*gin.Engine, error) {
 	})
 	router.Use(handlers.DefaultErrorHandler())
 	router.Use(handlers.WithFlash)
-	router.Use(handlers.WithAuthenticatedUser)
 	router.Use(handlers.WithViewHelpers)
 
+	router.GET("/", handlers.HandleGetHome)
+	//router.GET("/pricing", handlers.HandleGetHome)
+	router.GET("/signin", handlers.HandleGetSignin)
+	router.POST("/signin", handlers.HandleSigninWithEmail)
+	router.POST("/signin/google", handlers.HandleSigninWithGoogle)
+	router.GET("/signup", handlers.HandleGetSignup)
+	router.POST("/signup", handlers.HandleSignupWithEmail)
+	router.GET("/signout", handlers.HandleGetSignout)
+	router.GET("/auth/callback", handlers.HandleAuthCallback)
+
 	domains := router.Group("/domains", handlers.WithMustBeAuthenticated)
-	//domains := router.Group("/domains")
 	domains.GET("/", handlers.HandleDomainList)
 	domains.POST("/", handlers.HandleDomainCreate)
 	domains.GET("/new", handlers.HandleDomainNew)
@@ -79,7 +108,6 @@ func initApp() (*gin.Engine, error) {
 	domains.POST("/:id/delete", handlers.HandleDomainDelete)
 
 	account := router.Group("/account", handlers.WithMustBeAuthenticated)
-	//account := router.Group("/account")
 	account.GET("/", handlers.HandleAccountShow)
 	account.POST("/", handlers.HandleAccountUpdate)
 

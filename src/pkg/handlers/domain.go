@@ -43,7 +43,10 @@ func HandleDomainList(ctx *gin.Context) {
 		return
 	}
 	if count <= 0 {
-		ctx.HTML(http.StatusOK, "domains/index", util.Map{"userHasTrackings": false})
+		ctx.HTML(http.StatusOK, "domains/index", util.Map{
+			"userHasTrackings": false,
+			"user":             user,
+		})
 		return
 	}
 	filter, err := buildTrackingFilter(ctx)
@@ -69,14 +72,17 @@ func HandleDomainList(ctx *gin.Context) {
 		"userHasTrackings": true,
 		"pages":            buildPages(count, filter.Limit),
 		"queryParams":      filter.encode(),
+		"user":             user,
 	}
 	ctx.HTML(http.StatusOK, "domains/index", data)
 }
 
 func HandleDomainNew(ctx *gin.Context) {
+	user := getAuthenticatedUser(ctx)
 	flashes, _ := ctx.Get("flash")
 	ctx.HTML(http.StatusOK, "domains/new", util.Map{
 		"flash": flashes,
+		"user":  user,
 	})
 }
 
@@ -107,6 +113,7 @@ func HandleDomainShow(ctx *gin.Context) {
 	}
 	context := util.Map{
 		"tracking": tracking,
+		"user":     user,
 	}
 	ctx.HTML(http.StatusOK, "domains/show", context)
 }

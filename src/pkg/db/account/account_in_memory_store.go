@@ -10,20 +10,12 @@ import (
 
 type AccountInMemoryStore struct {
 	accounts []data.Account
+	userId   int64
 }
 
 func NewAccountInMemoryStore() *AccountInMemoryStore {
 	return &AccountInMemoryStore{
-		accounts: []data.Account{
-			{
-				UserId:             "123",
-				Email:              "email@email.com",
-				SubscriptionStatus: "active",
-				Plan:               data.PlanStarter,
-				NotifyUpfront:      7,
-				DefaultNotifyEmail: "email@email.com",
-			},
-		},
+		accounts: []data.Account{},
 	}
 }
 
@@ -101,6 +93,7 @@ func (abs *AccountInMemoryStore) CreateAccountForUserIfNotExist(user *data.User)
 	}
 
 	acc := data.Account{
+		Id:                 abs.userId,
 		UserId:             user.Id,
 		NotifyUpfront:      7,
 		DefaultNotifyEmail: user.Email,
@@ -108,6 +101,8 @@ func (abs *AccountInMemoryStore) CreateAccountForUserIfNotExist(user *data.User)
 	}
 
 	abs.accounts = append(abs.accounts, acc)
+
+	abs.userId = abs.userId + 1
 
 	logger.Log("event", "new account signup", "id", acc.Id)
 	return &acc, nil

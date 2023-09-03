@@ -1,24 +1,25 @@
 package handlers
 
 import (
+	"time"
+
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
 )
 
 func isUserSignedIn(ctx *gin.Context) bool {
 	user := getAuthenticatedUser(ctx)
-	return user != nil
+	return user != nil && time.Now().Before(user.ExpiresAt)
 }
 
 func getAuthenticatedUser(ctx *gin.Context) *data.User {
-	value, exist := ctx.Get(localsUserKey)
-	if exist {
-		if user, ok := value.(*data.User); ok {
-			return user
-		}
+	session := sessions.Default(ctx)
+	user, ok := session.Get(localsUserKey).(data.User)
+	if ok {
+		return &user
 	}
-	return &data.User{Id: "123", Email: "email@email.com"}
-	//return nil
+	return nil
 }
 
 func processResults(resultsChan chan data.DomainTracking) []data.DomainTracking {
