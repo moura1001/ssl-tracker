@@ -161,6 +161,12 @@ func createEngine() *ginview.ViewEngine {
 					return ""
 				}
 			},
+			"pluralize": func(word string, length int) string {
+				if length > 1 {
+					return fmt.Sprintf("%ss", word)
+				}
+				return word
+			},
 		},
 		DisableCache: true,
 		Delims:       goview.Delims{Left: "{{", Right: "}}"},

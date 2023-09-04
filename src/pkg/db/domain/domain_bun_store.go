@@ -32,6 +32,9 @@ func (dbs DomainBunStore) GetDomainTrackings(filter util.Map, limit int, page in
 	if limit <= 0 {
 		limit = defaultLimit
 	}
+	if page <= 0 {
+		page = 1
+	}
 	var trackings []data.DomainTracking
 	builder := db_service.Bun.NewSelect().Model(&trackings).Limit(limit)
 	for k, v := range filter {
@@ -39,39 +42,74 @@ func (dbs DomainBunStore) GetDomainTrackings(filter util.Map, limit int, page in
 			builder.Where("? = ?", bun.Ident(k), v)
 		}
 	}
-	offset := (limit - 1) * page
+	offset := (limit - 1) * (page - 1)
 	builder.Offset(offset)
-	err := builder.Scan(context.Background())
+	err := builder.OrderExpr("domain_tracking.id ASC").
+		Scan(context.Background())
 	return trackings, err
 }
 
-// TODO: implementation
 func (dbs DomainBunStore) GetDomainTracking(query util.Map) (*data.DomainTracking, error) {
-	return nil, nil
+	var tracking data.DomainTracking
+	builder := db_service.Bun.NewSelect().Model(&tracking)
+	for k, v := range query {
+		if v != "" {
+			builder.Where("? = ?", bun.Ident(k), v)
+		}
+	}
+	err := builder.Scan(context.Background())
+	return &tracking, err
 }
 
-// TODO: implementation
 func (dbs DomainBunStore) GetAllTrackingsWithAccount() ([]data.TrackingAndAccount, error) {
-	return []data.TrackingAndAccount{
-		{DomainTracking: data.DomainTracking{DomainName: "google.com"}},
-		{DomainTracking: data.DomainTracking{DomainName: "facebook.com"}},
-		{DomainTracking: data.DomainTracking{DomainName: "youtube.com"}},
-		{DomainTracking: data.DomainTracking{DomainName: "twitter.com"}},
-		{DomainTracking: data.DomainTracking{DomainName: "amazon.com"}},
-	}, nil
+	var trackings []data.TrackingAndAccount
+	err := db_service.Bun.NewSelect().
+		Table(domainTrackingTable).
+		ColumnExpr("domain_trackings.*").
+		ColumnExpr("a.notify_upfront").
+		Join("JOIN accounts AS a ON a.user_id = domain_trackings.user_id").
+		OrderExpr("domain_trackings.id ASC").
+		Scan(context.Background(), &trackings)
+	return trackings, err
 }
 
-// TODO: implementation
 func (dbs DomainBunStore) CreateDomainTrackings(trackings []data.DomainTracking) error {
+	if len(trackings) > 0 {
+		_, err := db_service.Bun.NewInsert().
+			Model(&trackings).
+			Ignore().
+			Exec(context.Background())
+		return err
+	}
 	return nil
 }
 
-// TODO: implementation
-func (dbs DomainBunStore) UpdateAllTrackings(trackings []data.DomainTracking) error {
+func (dbs DomainBunStore) UpdateAllTrackings(trackings []*data.DomainTracking) error {
+	if len(trackings) > 0 {
+		values := db_service.Bun.NewValues(&trackings)
+		_, err := db_service.Bun.NewUpdate().
+			With("_data", values).
+			Model((*data.DomainTracking)(nil)).
+			TableExpr("_data").
+			Set("status = _data.status").
+			Set("latency = _data.latency").
+			Set("last_poll_at = _data.last_poll_at").
+			Where("domain_tracking.id = _data.id").
+			Where("domain_tracking.user_id = _data.user_id").
+			Where("domain_tracking.domain_name = _data.domain_name").
+			Exec(context.Background())
+		return err
+	}
 	return nil
 }
 
-// TODO: implementation
 func (dbs DomainBunStore) DeleteDomainTracking(query util.Map) error {
-	return nil
+	builder := db_service.Bun.NewDelete().Model(&data.DomainTracking{})
+	for k, v := range query {
+		if v != "" {
+			builder.Where("? = ?", bun.Ident(k), v)
+		}
+	}
+	_, err := builder.Exec(context.Background())
+	return err
 }

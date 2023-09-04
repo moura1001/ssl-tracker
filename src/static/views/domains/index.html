@@ -1,46 +1,124 @@
 {{include "base/base"}}
 {{ block "content" . }}
+<script>
+    function submitHandler() {
+        var form = document.getElementById("trackingsForm");
+
+        const selStatus = document.getElementById("statusFilter");
+        const status = selStatus.value;
+
+        const selPage = document.getElementById("pageFilter");
+        const page = selPage.value;
+
+        console.log("status", status, "limit", page)
+        
+        form.action = `/domains?status={$status}&limit={$page}`;
+        form.submit();
+    }
+</script>
 <div class="container mx-auto mt-20 flex gap-10">
     {{include "base/sidenav"}}
-    {{if not .trackings}}
+    {{if and (not .trackings) (not .userHasTrackings)}}
     <div class="flex w-full justify-center mt-20">
         <div class="border border-base-300 p-8 rounded-lg text-center prose">
             <p class="font-semibold">You have currently no domains that are being tracked.</p>
             <p class="font-semibold"><a href="/domains/new">Click here to track domains</a></p>
         </div>
     </div>
-    {{end}}
-
-    {{if and .trackings .userHasTrackings}}
+    {{else}}    
     <div class="flex w-full">
         <div class="overflow-x-auto w-full">
-            <h1 class="text-3xl font-bold mb-12">My tracked domains</h1>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Domain</th>
-                        <th>Issuer</th>
-                        <th>Expiry date</th>
-                        <th>Days left</th>
-                        <th>Status</th>
-                        <th>Details</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{ range $tracking := .trackings }}
-                    <tr>
-                        <th>{{$tracking.Id}}</th>
-                        <th>{{$tracking.DomainName}}</th>
-                        <td>{{$tracking.Issuer}}</td>
-                        <td>{{formatTime $tracking.Expires}}</td>
-                        <td>{{daysLeft $tracking.Expires}}</td>
-                        <td>{{badgeForStatus $tracking.Status}}</td>
-                        <td><a class="btn btn-neutral btn-xs" href="/domains/{{$tracking.Id}}">show</a></td>
-                    </tr>
-                    {{ end }}
-                </tbody>
-            </table>
+            <form method="GET" id="trackingsForm">
+                <h1 class="text-3xl font-bold mb-6">Tracked domains</h1>
+                <div class="mb-4 border-b border-b-base-300 pb-4">
+                    <div class="flex justify-between">
+                        <div class="flex space-x-4 items-center">
+                            <p class="text-sm">
+                                {{len .trackings}} {{pluralize "result" (len .trackings)}}
+                            </p>
+                            {{$filters := .filters}}
+                            <span class="text-sm">filter by status</span>
+                            <select id="statusFilter" name="status" class="select select-bordered select-sm w-fit">
+                                {{ range $status := $filters.statuses }}
+                                {{if eq $status $filters.selectedStatus}}
+                                <option selected>{{$status}}</option>
+                                {{else}}
+                                <option>{{$status}}</option>
+                                {{end}}
+                                {{end}}
+                            </select>
+                            <span class="text-sm">domains per page</span>
+                            <select id="pageFilter" name="limit" class="select select-bordered select-sm w-18">
+                                {{ range $limit := $filters.limits }}
+                                {{if eq $limit $filters.selectedLimit}}
+                                <option selected>{{$limit}}</option>
+                                {{else}}
+                                <option>{{$limit}}</option>
+                                {{end}}
+                                {{end}}
+                            </select>
+                        </div>
+                        <div class="flex space-x-4">
+                            <a href="/domains" class="btn btn-neutral btn-outline btn-sm">reset filter</a>
+                            <button type="button" onclick="javascript:submitHandler()" class="btn btn-primary btn-sm">apply filter</button>
+                        </div>
+                    </div>
+                </div>
+
+                {{if and (not .trackings) .userHasTrackings}}
+                <p>No results found for the selected filter. <a class="text-blue-500 underline" href="/domains">reset filter</a></p>
+                {{end}}
+                
+                {{if not .userHasTrackings}}
+                <p class="mt-6 mb-4">You have no active trackings.</p>
+                <a class="btn btn-sm btn-primary" href="/domains/new">track domains</a>
+                {{end}}
+            
+                {{if and .trackings .userHasTrackings}}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><input type="checkbox" class="checkbox checkbox-xs" /></th>
+                            <th>Domain</th>
+                            <th>Issuer</th>
+                            <th>Expiry date</th>
+                            <th>Days left</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range $tracking := .trackings }}
+                        <tr>
+                            <th>{{$tracking.Id}}</th>
+                            <th><input type="checkbox" class="checkbox checkbox-xs" /></th>
+                            <th>{{$tracking.DomainName}}</th>
+                            <td>{{$tracking.Issuer}}</td>
+                            <td>{{formatTime $tracking.Expires}}</td>
+                            <td>{{daysLeft $tracking.Expires}}</td>
+                            <td>{{badgeForStatus $tracking.Status}}</td>
+                            <td><a class="btn btn-neutral btn-xs" href="/domains/{{$tracking.Id}}">show</a></td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+                <div class="flex justify-center mt-6">
+                    <div class="join">
+                    {{$pages := .pages}}
+                    {{$filters := .filters}}
+                    {{$queryParams := .queryParams}}
+                    {{ range $page := $pages }}
+                        {{if eq $page $filters.selectedPage}}
+                        <a href="?{{$queryParams}}&page={{$page}}" class="join-item btn btn-sm btn-active">{{$page}}</a>
+                        {{else}}
+                        <a href="?{{$queryParams}}&page={{$page}}" class="join-item btn btn-sm">{{$page}}</a>
+                        {{end}}
+                    {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </form>
         </div>
     </div>
     {{end}}

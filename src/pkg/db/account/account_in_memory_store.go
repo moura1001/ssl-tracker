@@ -97,7 +97,7 @@ func (abs *AccountInMemoryStore) CreateAccountForUserIfNotExist(user *data.User)
 		UserId:             user.Id,
 		NotifyUpfront:      7,
 		DefaultNotifyEmail: user.Email,
-		Plan:               data.PlanFree,
+		Plan:               data.PlanBusiness,
 	}
 
 	abs.accounts = append(abs.accounts, acc)

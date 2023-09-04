@@ -84,11 +84,11 @@ func (m *Monitor) maybeNotify(ctx context.Context, tracking data.TrackingAndAcco
 
 func (m *Monitor) processResults(resultsChan chan data.DomainTracking) error {
 	var (
-		trackings = make([]data.DomainTracking, len(resultsChan))
+		trackings = make([]*data.DomainTracking, len(resultsChan))
 		i         int
 	)
 	for result := range resultsChan {
-		trackings[i] = result
+		trackings[i] = &result
 		i++
 	}
 	return db.Store.Domain.UpdateAllTrackings(trackings)

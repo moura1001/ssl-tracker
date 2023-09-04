@@ -7,11 +7,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
@@ -52,7 +50,7 @@ func PollAllDomains(ctx context.Context) error {
 	}
 
 	var (
-		updatedTrackings = []data.DomainTracking{}
+		updatedTrackings = []*data.DomainTracking{}
 		wg               = sync.WaitGroup{}
 	)
 
@@ -66,13 +64,13 @@ func PollAllDomains(ctx context.Context) error {
 			}()
 
 			trackingInfo, err := PollDomain(ctx, tracking.DomainName)
-			if err != nil {
-				logger.Log("error", "failed to poll domain", "err", err, "domain", tracking.DomainName)
+			if err != nil || trackingInfo.Error != "" {
+				logger.Log("error", "failed to poll domain", "err", trackingInfo.Error, "domain", tracking.DomainName)
 				return
 			}
 			domainTracking := tracking.DomainTracking
 			domainTracking.DomainTrackingInfo = *trackingInfo
-			updatedTrackings = append(updatedTrackings, domainTracking)
+			updatedTrackings = append(updatedTrackings, &domainTracking)
 
 			expires := trackingInfo.Expires
 			notifyUpfront := time.Hour * 24 * time.Duration(tracking.NotifyUpfront)
@@ -155,13 +153,13 @@ func PollDomain(ctx context.Context, domain string) (*data.DomainTrackingInfo, e
 
 	select {
 	case <-ctx.Done():
-		fmt.Println(ctx.Err())
-		return nil, ctx.Err()
-		//return &data.DomainTrackingInfo{
-		//	Error:      ctx.Err().Error(),
-		//	Status:     data.StatusUnresponsive,
-		//	Issuer:		"n/a"
-		//}, nil
+		//fmt.Println(ctx.Err())
+		//return nil, ctx.Err()
+		return &data.DomainTrackingInfo{
+			Error:  ctx.Err().Error(),
+			Status: data.StatusUnresponsive,
+			Issuer: "n/a",
+		}, nil
 	case result := <-resultChan:
 		return &result, nil
 	}
@@ -267,5 +265,5 @@ func IsVerificationError(err error) bool {
 }
 
 func IsConnectionRefused(err error) bool {
-	return errors.Is(err, syscall.ECONNREFUSED)
+	return strings.Contains(err.Error(), "dial tcp")
 }

@@ -33,6 +33,7 @@ var statusFilters = []string{
 	data.StatusExpired,
 	data.StatusInvalid,
 	data.StatusOffline,
+	data.StatusUnresponsive,
 }
 
 func HandleDomainList(ctx *gin.Context) {
@@ -61,10 +62,14 @@ func HandleDomainList(ctx *gin.Context) {
 	if filter.Status != "all" {
 		query["status"] = filter.Status
 	}
-	domains, err := db.Store.Domain.GetAllTrackingsWithAccount()
+	domains, err := db.Store.Domain.GetDomainTrackings(query, filter.Limit, filter.Page)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
+	}
+
+	if filter.Status != "all" {
+		count = len(domains)
 	}
 	data := util.Map{
 		"trackings":        domains,
@@ -210,10 +215,10 @@ func createAllDomainTrackings(userId string, domains []string) error {
 }
 
 type trackingFilter struct {
-	Limit  int
-	Page   int
-	Status string
-	Sort   string
+	Limit  int    `form:"limit"`
+	Page   int    `form:"page"`
+	Status string `form:"status"`
+	Sort   string `form:"sort"`
 }
 
 func (f *trackingFilter) encode() string {
@@ -237,6 +242,9 @@ func buildTrackingFilter(ctx *gin.Context) (*trackingFilter, error) {
 		filter.Limit = 25
 	} else if filter.Limit < 0 {
 		filter.Limit = int(math.Abs(float64(filter.Limit)))
+	}
+	if filter.Status == "" {
+		filter.Status = "all"
 	}
 	return filter, nil
 }

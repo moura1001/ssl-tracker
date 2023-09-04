@@ -11,6 +11,6 @@ type DomainStore interface {
 	GetDomainTracking(query util.Map) (*data.DomainTracking, error)
 	GetAllTrackingsWithAccount() ([]data.TrackingAndAccount, error)
 	CreateDomainTrackings(trackings []data.DomainTracking) error
-	UpdateAllTrackings(trackings []data.DomainTracking) error
+	UpdateAllTrackings(trackings []*data.DomainTracking) error
 	DeleteDomainTracking(query util.Map) error
 }

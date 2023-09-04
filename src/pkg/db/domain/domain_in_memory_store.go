@@ -1,15 +1,11 @@
 package db_domain
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 
-	db_service "github.com/moura1001/ssl-tracker/src/pkg/db/service"
-
 	"github.com/moura1001/ssl-tracker/src/pkg/data"
 	"github.com/moura1001/ssl-tracker/src/pkg/util"
-	"github.com/uptrace/bun"
 )
 
 type DomainInMemoryStore struct {
@@ -38,17 +34,25 @@ func (dbs DomainInMemoryStore) GetDomainTrackings(filter util.Map, limit int, pa
 	if limit <= 0 {
 		limit = defaultLimit
 	}
-	var trackings []data.DomainTracking
-	builder := db_service.Bun.NewSelect().Model(&trackings).Limit(limit)
-	for k, v := range filter {
-		if v != "" {
-			builder.Where("? = ?", bun.Ident(k), v)
-		}
+	if page <= 0 {
+		page = 1
 	}
-	offset := (limit - 1) * page
-	builder.Offset(offset)
-	err := builder.Scan(context.Background())
-	return trackings, err
+
+	offset := (limit - 1) * (page - 1)
+
+	domains := []data.DomainTracking{}
+
+	for i, idx := offset, 0; i < len(dbs.domains) && idx < limit; {
+		domain := dbs.domains[i]
+		if isQueryMatch(domain, filter) {
+			domains = append(domains, dbs.domains[i])
+			idx++
+		}
+
+		i++
+	}
+
+	return domains, nil
 }
 
 func (dbs DomainInMemoryStore) GetDomainTracking(query util.Map) (*data.DomainTracking, error) {
@@ -88,12 +92,12 @@ func (dbs *DomainInMemoryStore) CreateDomainTrackings(trackings []data.DomainTra
 	return nil
 }
 
-func (dbs *DomainInMemoryStore) UpdateAllTrackings(trackings []data.DomainTracking) error {
+func (dbs *DomainInMemoryStore) UpdateAllTrackings(trackings []*data.DomainTracking) error {
 	for _, domain1 := range trackings {
 		for i, domain2 := range dbs.domains {
-			if isEquals(domain1, domain2) {
+			if isEquals(*domain1, domain2) {
 				domain1.Id = domain2.Id
-				dbs.domains[i] = domain1
+				dbs.domains[i] = *domain1
 				break
 			}
 		}
@@ -127,6 +131,18 @@ func isQueryMatch(domain data.DomainTracking, query util.Map) bool {
 				}
 			case "user_id":
 				isEquals := domain.UserId == v.(string)
+				queryEquals[k] = isEquals
+				if isEquals {
+					isEqualsCount++
+				}
+			case "domain_name":
+				isEquals := domain.DomainName == v.(string)
+				queryEquals[k] = isEquals
+				if isEquals {
+					isEqualsCount++
+				}
+			case "status":
+				isEquals := domain.Status == v.(string)
 				queryEquals[k] = isEquals
 				if isEquals {
 					isEqualsCount++
