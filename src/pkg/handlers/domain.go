@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"math"
 	"net/http"
 	"net/url"
@@ -62,14 +63,14 @@ func HandleDomainList(ctx *gin.Context) {
 	if filter.Status != "all" {
 		query["status"] = filter.Status
 	}
-	domains, err := db.Store.Domain.GetDomainTrackings(query, filter.Limit, filter.Page)
+	domainsCount, domains, err := db.Store.Domain.GetDomainTrackings(query, filter.Limit, filter.Page)
 	if err != nil {
 		ctx.Error(NewDefaultHttpError(err))
 		return
 	}
 
-	if filter.Status != "all" {
-		count = len(domains)
+	if filter.Status != "all" && domainsCount >= len(domains) {
+		count = domainsCount
 	}
 	data := util.Map{
 		"trackings":        domains,
@@ -221,16 +222,14 @@ type trackingFilter struct {
 	Sort   string `form:"sort"`
 }
 
-func (f *trackingFilter) encode() string {
+func (f *trackingFilter) encode() template.URL {
 	values := url.Values{}
 	if f.Limit > 0 {
 		values.Set("limit", strconv.Itoa(f.Limit))
 	}
-	if f.Page > 0 {
-		values.Set("page", strconv.Itoa(f.Page))
-	}
 	values.Set("status", f.Status)
-	return values.Encode()
+	queryParams := template.URL(values.Encode())
+	return queryParams
 }
 
 func buildTrackingFilter(ctx *gin.Context) (*trackingFilter, error) {
@@ -242,6 +241,9 @@ func buildTrackingFilter(ctx *gin.Context) (*trackingFilter, error) {
 		filter.Limit = 25
 	} else if filter.Limit < 0 {
 		filter.Limit = int(math.Abs(float64(filter.Limit)))
+	}
+	if filter.Page > 0 {
+		filter.Page = filter.Page - 1
 	}
 	if filter.Status == "" {
 		filter.Status = "all"
@@ -260,7 +262,8 @@ func buildFilterContext(filter *trackingFilter) util.Map {
 }
 
 func buildPages(results int, limit int) []int {
-	pages := make([]int, results/limit)
+	length := int(math.Round((float64(results) / float64(limit))))
+	pages := make([]int, length)
 	for i := 0; i < len(pages); i++ {
 		pages[i] = i + 1
 	}

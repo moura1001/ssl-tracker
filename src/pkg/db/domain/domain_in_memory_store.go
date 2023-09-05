@@ -30,15 +30,22 @@ func (dbs DomainInMemoryStore) CountUserDomainTrackings(userId string) (int, err
 	return count, nil
 }
 
-func (dbs DomainInMemoryStore) GetDomainTrackings(filter util.Map, limit int, page int) ([]data.DomainTracking, error) {
+func (dbs DomainInMemoryStore) CountDomainTrackings(filter util.Map) (int, error) {
+	count := 0
+	for _, domain := range dbs.domains {
+		if isQueryMatch(domain, filter) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (dbs DomainInMemoryStore) GetDomainTrackings(filter util.Map, limit int, page int) (int, []data.DomainTracking, error) {
 	if limit <= 0 {
 		limit = defaultLimit
 	}
-	if page <= 0 {
-		page = 1
-	}
 
-	offset := (limit - 1) * (page - 1)
+	offset := (limit - 1) * page
 
 	domains := []data.DomainTracking{}
 
@@ -52,7 +59,13 @@ func (dbs DomainInMemoryStore) GetDomainTrackings(filter util.Map, limit int, pa
 		i++
 	}
 
-	return domains, nil
+	isStatusAll := filter["status"] == "all"
+	if !isStatusAll && len(domains) >= limit {
+		count, _ := dbs.CountDomainTrackings(filter)
+		return count, domains, nil
+	}
+
+	return len(domains), domains, nil
 }
 
 func (dbs DomainInMemoryStore) GetDomainTracking(query util.Map) (*data.DomainTracking, error) {

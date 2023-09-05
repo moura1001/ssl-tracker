@@ -7,7 +7,8 @@ import (
 
 type DomainStore interface {
 	CountUserDomainTrackings(userId string) (int, error)
-	GetDomainTrackings(filter util.Map, limit int, page int) ([]data.DomainTracking, error)
+	CountDomainTrackings(filter util.Map) (int, error)
+	GetDomainTrackings(filter util.Map, limit int, page int) (int, []data.DomainTracking, error)
 	GetDomainTracking(query util.Map) (*data.DomainTracking, error)
 	GetAllTrackingsWithAccount() ([]data.TrackingAndAccount, error)
 	CreateDomainTrackings(trackings []data.DomainTracking) error

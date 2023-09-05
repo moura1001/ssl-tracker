@@ -28,12 +28,19 @@ func (dbs DomainBunStore) CountUserDomainTrackings(userId string) (int, error) {
 		Count(context.Background())
 }
 
-func (dbs DomainBunStore) GetDomainTrackings(filter util.Map, limit int, page int) ([]data.DomainTracking, error) {
+func (dbs DomainBunStore) CountDomainTrackings(filter util.Map) (int, error) {
+	builder := db_service.Bun.NewSelect().Model(&data.DomainTracking{})
+	for k, v := range filter {
+		if v != "" {
+			builder.Where("? = ?", bun.Ident(k), v)
+		}
+	}
+	return builder.Count(context.Background())
+}
+
+func (dbs DomainBunStore) GetDomainTrackings(filter util.Map, limit int, page int) (int, []data.DomainTracking, error) {
 	if limit <= 0 {
 		limit = defaultLimit
-	}
-	if page <= 0 {
-		page = 1
 	}
 	var trackings []data.DomainTracking
 	builder := db_service.Bun.NewSelect().Model(&trackings).Limit(limit)
@@ -42,11 +49,20 @@ func (dbs DomainBunStore) GetDomainTrackings(filter util.Map, limit int, page in
 			builder.Where("? = ?", bun.Ident(k), v)
 		}
 	}
-	offset := (limit - 1) * (page - 1)
+	offset := (limit - 1) * page
 	builder.Offset(offset)
 	err := builder.OrderExpr("domain_tracking.id ASC").
 		Scan(context.Background())
-	return trackings, err
+
+	isStatusAll := filter["status"] == "all"
+	if err == nil && !isStatusAll && len(trackings) >= limit {
+		count, err := dbs.CountDomainTrackings(filter)
+		if err == nil {
+			return count, trackings, nil
+		}
+	}
+
+	return len(trackings), trackings, err
 }
 
 func (dbs DomainBunStore) GetDomainTracking(query util.Map) (*data.DomainTracking, error) {

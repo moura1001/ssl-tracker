@@ -9,8 +9,6 @@
 
         const selPage = document.getElementById("pageFilter");
         const page = selPage.value;
-
-        console.log("status", status, "limit", page)
         
         form.action = `/domains?status={$status}&limit={$page}`;
         form.submit();
@@ -109,7 +107,7 @@
                     {{$filters := .filters}}
                     {{$queryParams := .queryParams}}
                     {{ range $page := $pages }}
-                        {{if eq $page $filters.selectedPage}}
+                        {{if eq $page (inc $filters.selectedPage)}}
                         <a href="?{{$queryParams}}&page={{$page}}" class="join-item btn btn-sm btn-active">{{$page}}</a>
                         {{else}}
                         <a href="?{{$queryParams}}&page={{$page}}" class="join-item btn btn-sm">{{$page}}</a>

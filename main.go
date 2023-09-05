@@ -167,6 +167,9 @@ func createEngine() *ginview.ViewEngine {
 				}
 				return word
 			},
+			"inc": func(i int) int {
+				return i + 1
+			},
 		},
 		DisableCache: true,
 		Delims:       goview.Delims{Left: "{{", Right: "}}"},
