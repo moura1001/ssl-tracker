@@ -1,18 +1,12 @@
-const colors = require('tailwindcss/colors')
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: ['./src/static/views/**/*.{html,js}'],
-    theme: {
-        extend: {
-            fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
-            },
-            colors: {
-                orange: colors.orange,
-                green: colors.green,
-            },
-        },
+    theme: {},
+    plugins: [
+        require("@tailwindcss/typography"),
+        require("daisyui"),
+    ],
+    daisyui: {
+        themes: ["light", "winter"],
     },
-    plugins: [],
 }

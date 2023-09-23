@@ -73,9 +73,7 @@ func initApp() (*gin.Engine, error) {
 	gin.DefaultWriter = io.Discard
 
 	router := gin.New()
-	//router.LoadHTMLGlob("src/static/views/**/*.html")
-	//router.LoadHTMLFiles("templates/template1.html", "templates/template2.html")
-	//config := router.Static("/src/static/assets", "./src/static/assets")
+	router.Static("/src/static/assets", "./src/static/assets")
 	router.HTMLRender = createEngine()
 
 	router.Use(sessions.Sessions("mysession", store))
@@ -136,7 +134,7 @@ func createEngine() *ginview.ViewEngine {
 				if t.Equal(timeZero) {
 					return "n/a"
 				}
-				return t.Format(time.RFC1123Z)
+				return t.Format(time.DateTime)
 			},
 			"daysLeft": func(t time.Time) string {
 				timeZero := time.Time{}

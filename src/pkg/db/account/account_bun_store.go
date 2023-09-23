@@ -48,12 +48,20 @@ func (abs AccountBunStore) UpdateAccount(account *data.Account) error {
 }
 
 func (abs AccountBunStore) CreateAccountForUserIfNotExist(user *data.User) (*data.Account, error) {
-	if acc, err := abs.GetUserAccount(user.Id); err == nil {
-		return acc, nil
+	var (
+		userId = user.Id
+	)
+
+	if len(userId) > 20 {
+		if acc, err := abs.GetUserAccount(user.Id); err == nil {
+			return acc, nil
+		}
+	} else {
+		userId = util.NewID()
 	}
 
 	acc := data.Account{
-		UserId:             user.Id,
+		UserId:             userId,
 		NotifyUpfront:      7,
 		DefaultNotifyEmail: user.Email,
 		Plan:               data.PlanFree,

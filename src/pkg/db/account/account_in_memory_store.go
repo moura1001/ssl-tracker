@@ -88,13 +88,21 @@ func (abs *AccountInMemoryStore) UpdateAccount(account *data.Account) error {
 }
 
 func (abs *AccountInMemoryStore) CreateAccountForUserIfNotExist(user *data.User) (*data.Account, error) {
-	if acc, err := abs.GetUserAccount(user.Id); err == nil {
-		return acc, nil
+	var (
+		userId = user.Id
+	)
+
+	if len(userId) > 20 {
+		if acc, err := abs.GetUserAccount(userId); err == nil {
+			return acc, nil
+		}
+	} else {
+		userId = util.NewID()
 	}
 
 	acc := data.Account{
 		Id:                 abs.userId,
-		UserId:             user.Id,
+		UserId:             userId,
 		NotifyUpfront:      7,
 		DefaultNotifyEmail: user.Email,
 		Plan:               data.PlanBusiness,

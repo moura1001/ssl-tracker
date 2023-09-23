@@ -14,13 +14,19 @@ import (
 )
 
 func HandleGetSignup(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "auth-signup.html", util.Map{})
+	data := util.Map{}
+	flash, exists := ctx.Get("flash")
+	if exists {
+		data, _ = flash.(util.Map)
+	}
+
+	ctx.HTML(http.StatusOK, "auth/signup", data)
 }
 
 type SignupParams struct {
-	Email    string
-	FullName string
-	Password string
+	Email    string `form:"email"`
+	FullName string `form:"fullName"`
+	Password string `form:"password"`
 }
 
 func (p SignupParams) validate() util.Map {
@@ -51,22 +57,20 @@ func HandleSignupWithEmail(ctx *gin.Context) {
 		return
 	}
 
-	//client := createSupabaseClient()
-	//client := createClient()
-	/*
-		// supabase SignInWithProvider returns a URL for signing in via OAuth
-		user, err := client.Auth.User(context.Background(), supabase.UserCredentials {
-			Email: params.Email,
-			Password: params.Password,
-			Data: util.Map{"fullName": params.FullName},
-		})
-		if err != nil {
-			ctx.Error(NewDefaultHttpError(err))
-			return
+	_, err := db.Store.Account.CreateAccountForUserIfNotExist(&data.User{
+		Email:    params.Email,
+		Password: params.Password,
+	})
+	if err != nil {
+		errors := util.Map{
+			"appError": fmt.Sprintf("error to create account. Details: %s", err),
 		}
-
-		ourUser := &data.User{Id: user.Id, Email: user.Email}
-	*/
+		errors["email"] = params.Email
+		errors["fullName"] = params.FullName
+		flashWithData(ctx, errors)
+		ctx.Redirect(http.StatusFound, "/signup")
+		return
+	}
 
 	logger.Log("msg", "user signup with email", "id", "client.Id")
 	ctx.HTML(http.StatusOK, "auth-email-confirmation.html", util.Map{

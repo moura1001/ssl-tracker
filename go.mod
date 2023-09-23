@@ -9,6 +9,7 @@ require (
 	github.com/go-kit/log v0.2.1
 	github.com/joho/godotenv v1.5.1
 	github.com/markbates/goth v1.77.0
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/uptrace/bun v1.1.14
 	github.com/uptrace/bun/dialect/pgdialect v1.1.14
